@@ -1,288 +1,539 @@
-# 📐 SƠ ĐỒ KIẾN TRÚC HỆ THỐNG QUẢN LÝ NHÂN SỰ
+# 📐 SƠ ĐỒ KIẾN TRÚC HỆ THỐNG - MERMAID DIAGRAMS
 
-## 🎯 Tổng quan
+## 1. 🏗️ Sơ đồ kiến trúc tổng thể (Architecture Diagram)
 
-Hệ thống Quản lý Nhân sự được xây dựng trên nền tảng **Odoo 15.0**, áp dụng kiến trúc **MVC (Model-View-Controller)** và **Layered Architecture** với 6 tầng chính.
-
----
-
-## 📊 Các tầng kiến trúc
-
-### 1️⃣ **Presentation Layer (Tầng giao diện)**
-
-**Mục đích:** Cung cấp giao diện người dùng
-
-**Thành phần:**
-- 🌐 **Web Browser**: Chrome, Firefox, Edge
-- 📱 **Mobile Browser**: Responsive design
-- 💻 **Desktop Client**: Truy cập qua localhost:8069
-
-**Công nghệ:**
-- HTML5, CSS3, JavaScript
-- QWeb Templates (Odoo)
-- Bootstrap framework
-
----
-
-### 2️⃣ **Odoo Framework (Tầng framework)**
-
-**Mục đích:** Cung cấp nền tảng và các dịch vụ cốt lõi
-
-**Thành phần:**
-- 🎮 **Web Controllers**: Xử lý HTTP requests/responses
-- 🗄️ **ORM (Object-Relational Mapping)**: Ánh xạ object ↔ database
-- 🔒 **Security**: Authentication, Authorization, Access Control
-- ⚙️ **Workflow Engine**: Quản lý quy trình nghiệp vụ
-
-**Tính năng:**
-- Multi-tenancy support
-- Session management
-- Caching mechanism
-- Logging & monitoring
-
----
-
-### 3️⃣ **Custom Modules (Tầng module tùy chỉnh)**
-
-Đây là **tầng nghiệp vụ chính** của hệ thống, bao gồm 4 module:
-
-#### 📗 **Module 1: QLNS (Quản lý Nhân sự)**
-**Chức năng:**
-- ✅ Quản lý thông tin nhân viên
-- ✅ Quản lý phòng ban
-- ✅ Quản lý chức vụ
-- ✅ Lưu trữ hồ sơ nhân viên
-
-**Models:**
-- `nhan_vien` (Nhân viên)
-- `phong_ban` (Phòng ban)
-- `chuc_vu` (Chức vụ)
-
----
-
-#### 📙 **Module 2: Chấm công**
-**Chức năng:**
-- ✅ Ghi nhận giờ vào/ra
-- ✅ Tính toán đi muộn, về sớm
-- ✅ Quản lý đăng ký ca làm
-- ✅ Xử lý đơn từ (nghỉ phép, đi muộn, về sớm)
-
-**Models:**
-- `bang_cham_cong` (Bảng chấm công)
-- `dang_ky_ca_lam_theo_ngay` (Đăng ký ca làm)
-- `don_tu` (Đơn từ)
-- `dot_dang_ky` (Đợt đăng ký)
-
-**Tính năng nổi bật:**
-- Tự động tính phút đi muộn/về sớm
-- Tích hợp với đơn từ để điều chỉnh
-- Hỗ trợ nhiều ca làm (Sáng, Chiều, Cả ngày)
-
----
-
-#### 📘 **Module 3: Tính lương**
-**Chức năng:**
-- ✅ Tính toán lương cơ bản
-- ✅ Quản lý trợ cấp (ăn trưa, xăng xe, điện thoại, v.v.)
-- ✅ Tự động tính lương theo công thức
-- ✅ Quản lý ngày trả lương
-- ✅ **Tích hợp Google Calendar** (Tính năng nâng cao)
-
-**Models:**
-- `tinh_luong.bang_luong` (Bảng lương)
-- `tinh_luong.tro_cap` (Trợ cấp)
-- `tinh_luong.ngay_tra_luong` (Ngày trả lương)
-
-**Công thức tính lương:**
-```
-Tổng lương = Lương cơ bản + Tổng trợ cấp
+```mermaid
+graph TB
+    subgraph "Presentation Layer - Giao diện người dùng"
+        A1[Web Browser<br/>Chrome/Firefox]
+        A2[Mobile Browser]
+    end
+    
+    subgraph "Odoo Framework 15.0"
+        B1[Web Controllers]
+        B2[ORM]
+        B3[Security]
+        B4[Workflow Engine]
+    end
+    
+    subgraph "Custom Modules - Tầng nghiệp vụ"
+        C1[📗 QLNS<br/>Nhân sự<br/>- Nhân viên<br/>- Phòng ban<br/>- Chức vụ]
+        C2[📙 Chấm công<br/>- Bảng chấm công<br/>- Đăng ký ca làm<br/>- Đơn từ]
+        C3[📘 Tính lương<br/>- Bảng lương<br/>- Trợ cấp<br/>- Ngày trả lương]
+        C4[📊 Dashboard<br/>- Biểu đồ<br/>- Thống kê<br/>- KPI]
+    end
+    
+    subgraph "Integration Layer"
+        D1[🔗 Google Calendar<br/>Integration<br/>- Service Account<br/>- Calendar API]
+    end
+    
+    subgraph "External Services"
+        E1[📅 Google Calendar]
+        E2[📧 Gmail API]
+    end
+    
+    subgraph "Database Layer"
+        F1[(PostgreSQL<br/>- nhan_vien<br/>- bang_cham_cong<br/>- bang_luong<br/>- etc.)]
+    end
+    
+    A1 & A2 --> B1
+    B1 --> B2
+    B2 --> B3
+    B3 --> B4
+    B4 --> C1 & C2 & C3 & C4
+    C3 --> D1
+    D1 --> E1 & E2
+    C1 & C2 & C3 & C4 --> F1
+    
+    style C1 fill:#90EE90
+    style C2 fill:#FFB347
+    style C3 fill:#87CEEB
+    style C4 fill:#DDA0DD
+    style D1 fill:#FFE4B5
+    style E1 fill:#FFD700
+    style F1 fill:#B0C4DE
 ```
 
 ---
 
-#### 📊 **Module 4: Dashboard**
-**Chức năng:**
-- ✅ Hiển thị biểu đồ thống kê
-- ✅ Phân tích dữ liệu (Graph views, Pivot tables)
-- ✅ Menu tổng hợp truy cập nhanh
-- ✅ KPI cards
+## 2. 🔄 Sơ đồ luồng dữ liệu (Data Flow Diagram)
 
-**Loại biểu đồ:**
-- 📊 **Bar Chart**: Thống kê nhân viên theo phòng ban, lương theo nhân viên
-- 🥧 **Pie Chart**: Phân bổ nhân viên theo chức vụ, trạng thái chấm công
-- 📈 **Line Chart**: Xu hướng lương theo tháng
-
----
-
-### 4️⃣ **Integration Layer (Tầng tích hợp)**
-
-**Mục đích:** Kết nối với các dịch vụ bên ngoài
-
-#### 🔗 **Google Calendar Integration**
-
-**Chức năng:**
-- Tự động tạo event "Ngày trả lương" trên Google Calendar
-- Nhắc nhở tự động (email + popup)
-- Đồng bộ 2 chiều
-
-**Công nghệ:**
-- **Google Calendar API v3**
-- **Service Account Authentication**
-- **OAuth 2.0**
-
-**Thư viện Python:**
-```python
-google-auth==2.48.0
-google-auth-oauthlib==1.2.4
-google-api-python-client==2.188.0
-```
-
-**Quy trình hoạt động:**
-1. User tạo "Ngày trả lương" trong Odoo
-2. Click button "Đồng bộ Google Calendar API"
-3. Module gọi Google Calendar API
-4. Event được tạo trên Google Calendar
-5. Nhận link event để xem trực tiếp
-
----
-
-### 5️⃣ **External Services (Dịch vụ bên ngoài)**
-
-**Các dịch vụ tích hợp:**
-
-#### 📅 **Google Calendar**
-- Lưu trữ sự kiện ngày trả lương
-- Gửi nhắc nhở tự động
-- Đồng bộ với nhiều thiết bị
-
-#### 📧 **Gmail API** (Tương lai)
-- Gửi email phiếu lương
-- Thông báo chấm công
-- Nhắc nhở deadline
-
----
-
-### 6️⃣ **Database Layer (Tầng cơ sở dữ liệu)**
-
-**DBMS:** PostgreSQL 12+
-
-**Cấu trúc:**
-```
-📁 Database: odoo
-├── 📊 nhan_vien (15 records)
-├── 📊 phong_ban (5 records)
-├── 📊 chuc_vu (8 records)
-├── 📊 bang_cham_cong (20 records)
-├── 📊 dang_ky_ca_lam_theo_ngay (15 records)
-├── 📊 don_tu (5 records)
-├── 📊 bang_luong (15 records)
-├── 📊 tro_cap (23 records)
-└── 📊 ngay_tra_luong (3 records)
-```
-
-**Đặc điểm:**
-- ACID compliance
-- Foreign key constraints
-- Indexing cho performance
-- Backup & recovery
-
----
-
-## 🔄 Luồng dữ liệu (Data Flow)
-
-### 1. **Luồng chấm công → Tính lương**
-```
-Nhân viên → Chấm công → Tính số giờ làm → Tính lương
-```
-
-### 2. **Luồng tích hợp Google Calendar**
-```
-Tạo ngày trả lương → Click đồng bộ → Google Calendar API → Event được tạo
-```
-
-### 3. **Luồng hiển thị Dashboard**
-```
-Database → ORM → Models → Graph Views → Web Browser
+```mermaid
+flowchart LR
+    subgraph Input
+        A[👤 Nhân viên]
+    end
+    
+    subgraph "Module Chấm công"
+        B[Ghi nhận giờ vào/ra]
+        C[Tính đi muộn/về sớm]
+        D[Xử lý đơn từ]
+    end
+    
+    subgraph "Module Tính lương"
+        E[Tính lương cơ bản]
+        F[Cộng trợ cấp]
+        G[Tạo bảng lương]
+        H[Tạo ngày trả lương]
+    end
+    
+    subgraph "Google Calendar Integration"
+        I[Đồng bộ API]
+        J[Tạo Event]
+    end
+    
+    subgraph Output
+        K[📅 Google Calendar]
+        L[💰 Phiếu lương]
+    end
+    
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+    E --> F
+    F --> G
+    G --> H
+    H --> I
+    I --> J
+    J --> K
+    G --> L
+    
+    style A fill:#90EE90
+    style K fill:#FFD700
+    style L fill:#87CEEB
 ```
 
 ---
 
-## 🛡️ Bảo mật (Security)
+## 3. 📊 Sơ đồ quan hệ Module (Module Relationship)
 
-### **Access Control**
-- ✅ Role-based access control (RBAC)
-- ✅ Record rules
-- ✅ Field-level security
-
-### **Authentication**
-- ✅ Username/Password
-- ✅ Session management
-- ✅ Google OAuth (cho Calendar API)
-
-### **Data Protection**
-- ✅ SQL injection prevention (ORM)
-- ✅ XSS protection
-- ✅ CSRF tokens
-
----
-
-## 📈 Khả năng mở rộng (Scalability)
-
-### **Hiện tại:**
-- 15 nhân viên
-- 5 phòng ban
-- 1 server
-
-### **Tương lai:**
-- Horizontal scaling với load balancer
-- Database replication
-- Caching layer (Redis)
-- Microservices architecture
-
----
-
-## 🔧 Công nghệ sử dụng
-
-### **Backend:**
-- Python 3.10
-- Odoo 15.0
-- PostgreSQL 12+
-
-### **Frontend:**
-- HTML5, CSS3
-- JavaScript (ES6+)
-- QWeb Templates
-- Bootstrap 4
-
-### **Integration:**
-- Google Calendar API v3
-- RESTful API
-- JSON
-
-### **DevOps:**
-- Git (Version control)
-- WSL2 (Development environment)
-- Virtual Environment (venv)
+```mermaid
+graph TD
+    A[Odoo Framework]
+    
+    B[QLNS<br/>Nhân sự]
+    C[Chấm công]
+    D[Tính lương]
+    E[Dashboard]
+    F[Google Calendar<br/>Integration]
+    
+    A --> B
+    A --> C
+    A --> D
+    A --> E
+    A --> F
+    
+    B -->|Cung cấp<br/>thông tin NV| C
+    B -->|Cung cấp<br/>thông tin NV| D
+    C -->|Dữ liệu<br/>chấm công| D
+    D -->|Dữ liệu<br/>lương| E
+    C -->|Dữ liệu<br/>chấm công| E
+    B -->|Dữ liệu<br/>nhân sự| E
+    D -->|Ngày trả lương| F
+    
+    style A fill:#E6E6FA
+    style B fill:#90EE90
+    style C fill:#FFB347
+    style D fill:#87CEEB
+    style E fill:#DDA0DD
+    style F fill:#FFE4B5
+```
 
 ---
 
-## 📝 Tổng kết
+## 4. 🗄️ Sơ đồ cơ sở dữ liệu (ERD - Entity Relationship Diagram)
 
-Hệ thống được thiết kế theo:
-- ✅ **Kiến trúc phân tầng** (Layered Architecture)
-- ✅ **Nguyên tắc MVC** (Model-View-Controller)
-- ✅ **Separation of Concerns**
-- ✅ **Modularity & Reusability**
-- ✅ **Scalability & Maintainability**
-
-**Điểm nổi bật:**
-- 🎯 Tích hợp Google Calendar API (External API)
-- 📊 Dashboard với biểu đồ phân tích
-- 🔄 Tự động hóa quy trình tính lương
-- 🛡️ Bảo mật đa lớp
+```mermaid
+erDiagram
+    NHAN_VIEN ||--o{ BANG_CHAM_CONG : "có"
+    NHAN_VIEN ||--o{ BANG_LUONG : "có"
+    NHAN_VIEN }o--|| PHONG_BAN : "thuộc"
+    NHAN_VIEN }o--|| CHUC_VU : "có"
+    
+    BANG_CHAM_CONG }o--|| DANG_KY_CA_LAM : "dựa trên"
+    BANG_CHAM_CONG }o--o| DON_TU : "liên quan"
+    
+    BANG_LUONG ||--o{ TRO_CAP : "có"
+    BANG_LUONG }o--|| DOT_LAM_VIEC : "thuộc"
+    
+    NGAY_TRA_LUONG }o--|| DOT_LAM_VIEC : "cho"
+    NGAY_TRA_LUONG ||--o| GOOGLE_EVENT : "tạo"
+    
+    NHAN_VIEN {
+        int id PK
+        string ho_va_ten
+        string email
+        date ngay_sinh
+        int phong_ban_id FK
+        int chuc_vu_id FK
+    }
+    
+    PHONG_BAN {
+        int id PK
+        string ten_phong_ban
+        string ma_phong_ban
+    }
+    
+    CHUC_VU {
+        int id PK
+        string ten_chuc_vu
+        float luong_co_ban
+    }
+    
+    BANG_CHAM_CONG {
+        int id PK
+        int nhan_vien_id FK
+        date ngay_cham_cong
+        datetime gio_vao
+        datetime gio_ra
+        float phut_di_muon
+        float phut_ve_som
+        string trang_thai
+    }
+    
+    BANG_LUONG {
+        int id PK
+        int nhan_vien_id FK
+        float luong_co_ban
+        float tong_tro_cap
+        float tong_luong
+        date thang
+    }
+    
+    TRO_CAP {
+        int id PK
+        int bang_luong_id FK
+        string loai
+        float so_tien
+    }
+    
+    NGAY_TRA_LUONG {
+        int id PK
+        string ten_dot_chi_tra
+        date ngay_tra
+        int dot_lam_viec_id FK
+        string google_event_id
+    }
+```
 
 ---
 
-**Người thực hiện:** [Tên của bạn]  
+## 5. 🔐 Sơ đồ bảo mật (Security Architecture)
+
+```mermaid
+graph TB
+    subgraph "User Layer"
+        A[👤 User Login]
+    end
+    
+    subgraph "Authentication"
+        B[Username/Password]
+        C[Session Token]
+    end
+    
+    subgraph "Authorization"
+        D[Role-Based Access Control]
+        E[Record Rules]
+        F[Field-Level Security]
+    end
+    
+    subgraph "Data Access"
+        G[ORM Layer<br/>SQL Injection Prevention]
+        H[XSS Protection]
+        I[CSRF Tokens]
+    end
+    
+    subgraph "External API Security"
+        J[Google OAuth 2.0]
+        K[Service Account]
+        L[API Key Management]
+    end
+    
+    subgraph "Database"
+        M[(Encrypted Data)]
+    end
+    
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+    E --> F
+    F --> G
+    G --> H
+    H --> I
+    I --> M
+    
+    D --> J
+    J --> K
+    K --> L
+    
+    style A fill:#FFB6C1
+    style M fill:#B0C4DE
+    style J fill:#FFD700
+```
+
+---
+
+## 6. 🚀 Sơ đồ triển khai (Deployment Diagram)
+
+```mermaid
+graph TB
+    subgraph "Client Side"
+        A[Web Browser]
+        B[Mobile Browser]
+    end
+    
+    subgraph "Server - localhost:8069"
+        C[Odoo Server<br/>Python 3.10]
+        D[Web Server<br/>Werkzeug]
+    end
+    
+    subgraph "Application"
+        E[Custom Modules<br/>QLNS, Chấm công,<br/>Tính lương, Dashboard]
+    end
+    
+    subgraph "Database Server - localhost:5431"
+        F[(PostgreSQL 12+)]
+    end
+    
+    subgraph "External Services"
+        G[Google Calendar API<br/>calendar.google.com]
+    end
+    
+    subgraph "Development Environment"
+        H[WSL2 Ubuntu 22.04]
+        I[Virtual Environment<br/>venv]
+    end
+    
+    A & B -->|HTTP/HTTPS| D
+    D --> C
+    C --> E
+    E -->|ORM| F
+    E -->|REST API| G
+    C --> I
+    I --> H
+    
+    style A fill:#90EE90
+    style F fill:#B0C4DE
+    style G fill:#FFD700
+    style H fill:#E6E6FA
+```
+
+---
+
+## 7. 📈 Sơ đồ Use Case (Use Case Diagram)
+
+```mermaid
+graph LR
+    subgraph "Actors"
+        A[👤 Nhân viên]
+        B[👨‍💼 Quản lý]
+        C[💻 Admin]
+    end
+    
+    subgraph "Use Cases - QLNS"
+        D[Xem thông tin cá nhân]
+        E[Quản lý nhân viên]
+        F[Quản lý phòng ban]
+    end
+    
+    subgraph "Use Cases - Chấm công"
+        G[Chấm công]
+        H[Đăng ký ca làm]
+        I[Gửi đơn từ]
+        J[Duyệt đơn từ]
+    end
+    
+    subgraph "Use Cases - Tính lương"
+        K[Xem phiếu lương]
+        L[Tính lương]
+        M[Quản lý trợ cấp]
+        N[Đồng bộ Google Calendar]
+    end
+    
+    subgraph "Use Cases - Dashboard"
+        O[Xem biểu đồ]
+        P[Xuất báo cáo]
+    end
+    
+    A --> D
+    A --> G
+    A --> H
+    A --> I
+    A --> K
+    A --> O
+    
+    B --> E
+    B --> J
+    B --> L
+    B --> M
+    B --> N
+    B --> O
+    B --> P
+    
+    C --> E
+    C --> F
+    C --> L
+    C --> M
+    C --> N
+    C --> P
+    
+    style A fill:#90EE90
+    style B fill:#FFB347
+    style C fill:#87CEEB
+```
+
+---
+
+## 8. ⚙️ Sơ đồ quy trình nghiệp vụ (Business Process Flow)
+
+```mermaid
+sequenceDiagram
+    participant NV as 👤 Nhân viên
+    participant CC as Chấm công
+    participant TL as Tính lương
+    participant GC as Google Calendar
+    participant QL as 👨‍💼 Quản lý
+    
+    NV->>CC: 1. Chấm công hàng ngày
+    CC->>CC: 2. Tính đi muộn/về sớm
+    
+    alt Có đơn từ
+        NV->>CC: 3a. Gửi đơn từ
+        QL->>CC: 3b. Duyệt đơn từ
+        CC->>CC: 3c. Điều chỉnh chấm công
+    end
+    
+    Note over CC,TL: Cuối tháng
+    
+    TL->>CC: 4. Lấy dữ liệu chấm công
+    TL->>TL: 5. Tính lương + trợ cấp
+    TL->>NV: 6. Tạo phiếu lương
+    
+    QL->>TL: 7. Tạo ngày trả lương
+    TL->>GC: 8. Đồng bộ Google Calendar
+    GC->>QL: 9. Tạo event & nhắc nhở
+    
+    Note over NV,QL: Ngày trả lương
+    QL->>NV: 10. Trả lương
+```
+
+---
+
+## 9. 🔗 Sơ đồ tích hợp Google Calendar (Integration Flow)
+
+```mermaid
+flowchart TD
+    A[Bắt đầu] --> B[Tạo Ngày trả lương<br/>trong Odoo]
+    B --> C[Click button<br/>'Đồng bộ Google Calendar API']
+    C --> D{Đã cấu hình<br/>Service Account?}
+    
+    D -->|Không| E[Hiển thị lỗi:<br/>Chưa cấu hình]
+    E --> F[Vào Settings<br/>→ Google Calendar Config]
+    F --> G[Paste Service Account JSON]
+    G --> H[Nhập Calendar ID]
+    H --> C
+    
+    D -->|Có| I[Đọc cấu hình]
+    I --> J[Parse JSON credentials]
+    J --> K[Tạo Google API client]
+    K --> L[Gọi Calendar API:<br/>events.insert]
+    
+    L --> M{API call<br/>thành công?}
+    
+    M -->|Không| N[Hiển thị lỗi]
+    N --> O[Log error details]
+    O --> P[Kết thúc]
+    
+    M -->|Có| Q[Lưu Event ID<br/>vào Odoo]
+    Q --> R[Lưu Event Link]
+    R --> S[Hiển thị thông báo<br/>thành công]
+    S --> T[User click<br/>'Xem trên Google Calendar']
+    T --> U[Mở link event<br/>trên browser]
+    U --> P
+    
+    style A fill:#90EE90
+    style E fill:#FFB347
+    style N fill:#FF6B6B
+    style S fill:#87CEEB
+    style P fill:#DDA0DD
+```
+
+---
+
+## 10. 📊 Sơ đồ Dashboard Architecture
+
+```mermaid
+graph TB
+    subgraph "User Interface"
+        A[Dashboard Menu]
+    end
+    
+    subgraph "Dashboard Views"
+        B1[📈 Biểu đồ nhân viên]
+        B2[📈 Biểu đồ chấm công]
+        B3[📈 Biểu đồ lương]
+        B4[📈 Biểu đồ trợ cấp]
+    end
+    
+    subgraph "Graph Types"
+        C1[Bar Chart<br/>Theo phòng ban]
+        C2[Pie Chart<br/>Theo chức vụ]
+        C3[Line Chart<br/>Xu hướng tháng]
+        C4[Pivot Table<br/>Phân tích chi tiết]
+    end
+    
+    subgraph "Data Sources"
+        D1[(nhan_vien)]
+        D2[(bang_cham_cong)]
+        D3[(bang_luong)]
+        D4[(tro_cap)]
+    end
+    
+    A --> B1 & B2 & B3 & B4
+    
+    B1 --> C1 & C2
+    B2 --> C1 & C2 & C3
+    B3 --> C1 & C3 & C4
+    B4 --> C2 & C4
+    
+    C1 & C2 --> D1
+    C1 & C2 & C3 --> D2
+    C1 & C3 & C4 --> D3
+    C2 & C4 --> D4
+    
+    style A fill:#DDA0DD
+    style D1 fill:#90EE90
+    style D2 fill:#FFB347
+    style D3 fill:#87CEEB
+    style D4 fill:#FFD700
+```
+
+---
+
+## 📝 Cách sử dụng
+
+### Xem trên GitHub/GitLab:
+- Các sơ đồ Mermaid sẽ tự động render
+
+### Xem trên VS Code:
+1. Cài extension: "Markdown Preview Mermaid Support"
+2. Mở file này
+3. Nhấn `Ctrl+Shift+V` để preview
+
+### Xuất ra hình ảnh:
+- Sử dụng https://mermaid.live
+- Copy code Mermaid
+- Export PNG/SVG
+
+### Chỉnh sửa:
+- Thay đổi text trong `[]` hoặc `{}`
+- Thêm/bớt node bằng cách thêm/xóa dòng
+- Thay đổi màu: `style NodeName fill:#COLOR`
+
+---
+
+**Tạo bởi:** Hệ thống Quản lý Nhân sự  
 **Ngày:** 02/02/2026  
-**Phiên bản:** 1.0
+**Công cụ:** Mermaid.js
