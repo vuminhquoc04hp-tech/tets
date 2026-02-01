@@ -1,705 +1,490 @@
-# 🔗 TÍCH HỢP NÂNG CAO - GOOGLE CALENDAR API
+# 📋 MÔ TẢ CÁC MODEL (CHỨC NĂNG) THEO MODULE
 
-## 📋 MỤC LỤC
-1. [Tổng quan](#1-tổng-quan)
-2. [Kiến trúc tích hợp](#2-kiến-trúc-tích-hợp)
-3. [Công nghệ sử dụng](#3-công-nghệ-sử-dụng)
-4. [Quy trình tích hợp](#4-quy-trình-tích-hợp)
-5. [Cấu hình chi tiết](#5-cấu-hình-chi-tiết)
-6. [Code implementation](#6-code-implementation)
-7. [Xử lý lỗi](#7-xử-lý-lỗi)
-8. [Bảo mật](#8-bảo-mật)
-9. [Testing](#9-testing)
-10. [Mở rộng tương lai](#10-mở-rộng-tương-lai)
+## 🎯 TỔNG QUAN
+
+Hệ thống có **5 modules** với **12 models** chính.
 
 ---
 
-## 1. TỔNG QUAN
+## 1️⃣ MODULE QUẢN LÝ NHÂN SỰ (nhan_su)
 
-### 1.1. Giới thiệu
+### Model 1.1: `nhan_vien` (Nhân viên)
 
-**Tích hợp Google Calendar API** là tính năng nâng cao cho phép hệ thống Odoo tự động tạo và quản lý các sự kiện "Ngày trả lương" trên Google Calendar.
+**Mục đích:** Quản lý thông tin nhân viên trong công ty
 
-### 1.2. Mục tiêu
+**Chức năng:**
+- Lưu trữ thông tin cá nhân (họ tên, email, SĐT, ngày sinh, giới tính, địa chỉ)
+- Lưu trữ thông tin công việc (phòng ban, chức vụ, lương cơ bản, ngày vào làm)
+- Quản lý trạng thái làm việc (đang làm/nghỉ việc)
+- Tìm kiếm và lọc nhân viên
+- Xuất báo cáo danh sách nhân viên
 
-- ✅ **Tự động hóa**: Tự động tạo event khi có ngày trả lương mới
-- ✅ **Đồng bộ 2 chiều**: Odoo ↔ Google Calendar
-- ✅ **Nhắc nhở thông minh**: Email + Popup tự động
-- ✅ **Truy cập đa nền tảng**: Web, Mobile, Desktop
-- ✅ **Chia sẻ dễ dàng**: Chia sẻ calendar với nhiều người
+**Các trường quan trọng:**
+- `ho_va_ten`: Họ và tên đầy đủ
+- `email`: Email công ty (unique)
+- `phong_ban_id`: Liên kết đến phòng ban
+- `chuc_vu_id`: Liên kết đến chức vụ
+- `luong_co_ban`: Lương cơ bản (lấy từ chức vụ)
+- `trang_thai`: Trạng thái làm việc
 
-### 1.3. Lợi ích
-
-| Đối tượng | Lợi ích |
-|-----------|---------|
-| **Quản lý** | Không bỏ lỡ ngày trả lương, nhận nhắc nhở tự động |
-| **Nhân viên** | Biết trước ngày nhận lương, lên kế hoạch tài chính |
-| **Kế toán** | Quản lý lịch chi trả tập trung |
-| **Công ty** | Tăng tính chuyên nghiệp, minh bạch |
-
----
-
-## 2. KIẾN TRÚC TÍCH HỢP
-
-### 2.1. Sơ đồ kiến trúc
-
-```mermaid
-graph TB
-    subgraph "Odoo System"
-        A[Odoo Server]
-        B[Module: tinh_luong]
-        C[Model: ngay_tra_luong]
-        D[Module: google_calendar_integration]
-        E[Model: google.calendar.config]
-    end
-    
-    subgraph "Integration Layer"
-        F[Google Auth Library]
-        G[Google API Client]
-        H[Service Account Credentials]
-    end
-    
-    subgraph "Google Cloud Platform"
-        I[Google Calendar API v3]
-        J[Google Calendar Service]
-        K[User's Calendar]
-    end
-    
-    subgraph "External Services"
-        L[Gmail - Email Reminders]
-        M[Google Notifications]
-    end
-    
-    C --> D
-    D --> E
-    E --> F
-    F --> H
-    H --> G
-    G --> I
-    I --> J
-    J --> K
-    K --> L
-    K --> M
-    
-    style D fill:#FFE4B5
-    style I fill:#FFD700
-    style K fill:#90EE90
-```
-
-### 2.2. Luồng dữ liệu
-
-```mermaid
-sequenceDiagram
-    participant U as User (Admin)
-    participant O as Odoo
-    participant C as Config Model
-    participant A as Auth Service
-    participant G as Google Calendar API
-    participant Cal as Google Calendar
-    
-    U->>O: Tạo "Ngày trả lương"
-    U->>O: Click "Đồng bộ Google Calendar"
-    O->>C: Lấy cấu hình
-    C->>O: Return config (Calendar ID, JSON)
-    
-    O->>A: Parse Service Account JSON
-    A->>A: Tạo credentials
-    A->>G: Authenticate
-    G->>A: Access Token
-    
-    O->>G: POST /calendars/{calendarId}/events
-    Note over O,G: Body: {summary, start, end, reminders}
-    
-    G->>Cal: Tạo event
-    Cal->>G: Event created (ID, Link)
-    G->>O: Return Event ID + Link
-    
-    O->>O: Lưu Event ID, Link vào DB
-    O->>O: Update status = "synced"
-    O->>U: Thông báo thành công
-    
-    Note over Cal: Ngày trả lương - 1 ngày
-    Cal->>U: Gửi email reminder
-    
-    Note over Cal: Ngày trả lương - 1 giờ
-    Cal->>U: Hiển thị popup reminder
-```
+**Ràng buộc:**
+- Email phải duy nhất
+- Phải thuộc 1 phòng ban và 1 chức vụ
+- Ngày sinh < ngày hiện tại
 
 ---
 
-## 3. CÔNG NGHỆ SỬ DỤNG
+### Model 1.2: `phong_ban` (Phòng ban)
 
-### 3.1. Google Calendar API
+**Mục đích:** Quản lý các phòng ban trong công ty
 
-**Phiên bản:** v3  
-**Endpoint:** `https://www.googleapis.com/calendar/v3`  
-**Documentation:** https://developers.google.com/calendar/api/v3/reference
+**Chức năng:**
+- Tạo/sửa/xóa phòng ban
+- Lưu trữ mã và tên phòng ban
+- Hiển thị số lượng nhân viên trong phòng ban
+- Phân loại nhân viên theo phòng ban
 
-**Các API sử dụng:**
+**Các trường quan trọng:**
+- `ten_phong_ban`: Tên phòng ban (VD: "Phòng Kỹ thuật")
+- `ma_phong_ban`: Mã phòng ban (VD: "IT", unique)
 
-| API Method | Endpoint | Mục đích |
-|------------|----------|----------|
-| `events.insert` | POST `/calendars/{calendarId}/events` | Tạo event mới |
-| `events.get` | GET `/calendars/{calendarId}/events/{eventId}` | Lấy thông tin event |
-| `events.update` | PUT `/calendars/{calendarId}/events/{eventId}` | Cập nhật event |
-| `events.delete` | DELETE `/calendars/{calendarId}/events/{eventId}` | Xóa event |
+**Ràng buộc:**
+- Mã phòng ban phải duy nhất
+- Không thể xóa phòng ban đang có nhân viên
 
-### 3.2. Thư viện Python
-
-```python
-# requirements.txt
-google-auth==2.48.0              # Xác thực Google
-google-auth-oauthlib==1.2.4      # OAuth 2.0 flow
-google-api-python-client==2.188.0 # Google API client
-```
-
-**Cài đặt:**
-```bash
-pip install google-auth google-auth-oauthlib google-api-python-client
-```
-
-### 3.3. Service Account Authentication
-
-**Tại sao dùng Service Account?**
-
-| Phương pháp | Ưu điểm | Nhược điểm | Phù hợp |
-|-------------|---------|------------|---------|
-| **OAuth 2.0** | User consent, secure | Phức tạp, cần user login | Web apps |
-| **API Key** | Đơn giản | Không secure, giới hạn | Public data |
-| **Service Account** ✅ | Tự động, không cần user, secure | Cần setup GCP | Server-to-server |
-
-**Service Account cho phép:**
-- ✅ Tự động xác thực không cần user login
-- ✅ Chạy background jobs
-- ✅ Bảo mật cao (private key)
-- ✅ Phù hợp cho server-side integration
+**Ví dụ dữ liệu:**
+- Phòng Kỹ thuật (IT)
+- Phòng Kinh doanh (SALES)
+- Phòng Nhân sự (HR)
 
 ---
 
-## 4. QUY TRÌNH TÍCH HỢP
+### Model 1.3: `chuc_vu` (Chức vụ)
 
-### 4.1. Quy trình tổng quan
+**Mục đích:** Quản lý các chức vụ và mức lương tương ứng
 
-```mermaid
-flowchart TD
-    A[Bắt đầu] --> B[Setup Google Cloud Project]
-    B --> C[Enable Google Calendar API]
-    C --> D[Tạo Service Account]
-    D --> E[Download JSON Key]
-    E --> F[Share Calendar với Service Account]
-    F --> G[Cấu hình trong Odoo]
-    G --> H[Test kết nối]
-    H --> I{Thành công?}
-    I -->|Không| J[Kiểm tra lỗi]
-    J --> G
-    I -->|Có| K[Sử dụng tính năng]
-    K --> L[Kết thúc]
-    
-    style A fill:#90EE90
-    style I fill:#FFD700
-    style J fill:#FF6B6B
-    style L fill:#DDA0DD
-```
+**Chức năng:**
+- Tạo/sửa/xóa chức vụ
+- Định nghĩa lương cơ bản cho từng chức vụ
+- Hiển thị số lượng nhân viên có chức vụ
+- Tự động gán lương cơ bản cho nhân viên mới
 
-### 4.2. Chi tiết từng bước
+**Các trường quan trọng:**
+- `ten_chuc_vu`: Tên chức vụ (VD: "Trưởng phòng")
+- `luong_co_ban`: Mức lương cơ bản mặc định
 
-#### **Bước 1: Setup Google Cloud Project**
+**Ràng buộc:**
+- Không thể xóa chức vụ đang có nhân viên
 
-1. Truy cập: https://console.cloud.google.com
-2. Click "Select a project" → "New Project"
-3. Nhập tên project: "Odoo HR Management"
-4. Click "Create"
-
-#### **Bước 2: Enable Google Calendar API**
-
-1. Vào "APIs & Services" → "Library"
-2. Tìm "Google Calendar API"
-3. Click "Enable"
-
-#### **Bước 3: Tạo Service Account**
-
-1. Vào "APIs & Services" → "Credentials"
-2. Click "Create Credentials" → "Service Account"
-3. Nhập thông tin:
-   - **Name:** `odoo-calendar-service`
-   - **Description:** "Service account for Odoo Calendar integration"
-4. Click "Create and Continue"
-5. Grant role: "Editor" (hoặc không cần)
-6. Click "Done"
-
-#### **Bước 4: Download JSON Key**
-
-1. Click vào Service Account vừa tạo
-2. Tab "Keys" → "Add Key" → "Create new key"
-3. Chọn "JSON"
-4. Click "Create" → File JSON sẽ được download
-
-**Cấu trúc JSON:**
-```json
-{
-  "type": "service_account",
-  "project_id": "odoo-hr-management",
-  "private_key_id": "abc123...",
-  "private_key": "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n",
-  "client_email": "odoo-calendar-service@odoo-hr-management.iam.gserviceaccount.com",
-  "client_id": "123456789...",
-  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-  "token_uri": "https://oauth2.googleapis.com/token",
-  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/..."
-}
-```
-
-#### **Bước 5: Share Calendar**
-
-1. Mở Google Calendar: https://calendar.google.com
-2. Click vào calendar muốn share (hoặc tạo mới)
-3. Click "⋮" → "Settings and sharing"
-4. Scroll xuống "Share with specific people"
-5. Click "Add people"
-6. Nhập email của Service Account (từ JSON: `client_email`)
-   - VD: `odoo-calendar-service@odoo-hr-management.iam.gserviceaccount.com`
-7. Chọn permission: "Make changes to events"
-8. Click "Send"
-
-#### **Bước 6: Cấu hình trong Odoo**
-
-1. Login Odoo với quyền Admin
-2. Vào menu: **Tính lương** → **⚙️ Cấu hình Google Calendar**
-3. Click "Create"
-4. Nhập thông tin:
-   - **Name:** "Google Calendar - Admin"
-   - **Calendar ID:** Email của bạn (VD: `admin@company.com`)
-   - **Service Account JSON:** Paste toàn bộ nội dung file JSON
-   - **Active:** ✅ Check
-5. Click "Save"
-
-#### **Bước 7: Test kết nối**
-
-1. Vào menu: **Tính lương** → **Ngày trả lương**
-2. Tạo hoặc mở 1 record
-3. Click button "🔗 Đồng bộ Google Calendar API"
-4. Kiểm tra:
-   - ✅ Thông báo thành công
-   - ✅ Có Event ID và Link
-   - ✅ Event xuất hiện trên Google Calendar
+**Ví dụ dữ liệu:**
+- Giám đốc: 30,000,000 VNĐ
+- Trưởng phòng: 20,000,000 VNĐ
+- Nhân viên: 10,000,000 VNĐ
 
 ---
 
-## 5. CẤU HÌNH CHI TIẾT
+## 2️⃣ MODULE CHẤM CÔNG (cham_cong)
 
-### 5.1. Model: `google.calendar.config`
+### Model 2.1: `dot_dang_ky` (Đợt đăng ký)
 
-**File:** `addons/google_calendar_integration/models/google_calendar_config.py`
+**Mục đích:** Quản lý các đợt mở đăng ký ca làm
 
-```python
-from odoo import models, fields
+**Chức năng:**
+- Tạo đợt đăng ký mới cho tháng
+- Thiết lập thời gian đăng ký (từ ngày - đến ngày)
+- Thiết lập thời gian làm việc (từ ngày - đến ngày)
+- Mở/đóng đợt đăng ký
+- Theo dõi số lượng đăng ký
 
-class GoogleCalendarConfig(models.Model):
-    _name = 'google.calendar.config'
-    _description = 'Google Calendar Configuration'
-    
-    name = fields.Char(string='Tên cấu hình', required=True)
-    calendar_id = fields.Char(
-        string='Calendar ID',
-        required=True,
-        help='Email của calendar (VD: admin@company.com)'
-    )
-    service_account_json = fields.Text(
-        string='Service Account JSON',
-        help='Paste nội dung file JSON từ Google Cloud Console'
-    )
-    active = fields.Boolean(string='Kích hoạt', default=True)
-```
+**Các trường quan trọng:**
+- `ten_dot`: Tên đợt (VD: "Đợt đăng ký tháng 2/2026")
+- `ngay_bat_dau`: Ngày mở đăng ký
+- `ngay_ket_thuc`: Ngày đóng đăng ký
+- `ngay_bat_dau_lam_viec`: Ngày bắt đầu làm việc
+- `ngay_ket_thuc_lam_viec`: Ngày kết thúc làm việc
+- `trang_thai`: Trạng thái (mo/dong)
 
-### 5.2. Security Rules
-
-**File:** `addons/google_calendar_integration/security/ir.model.access.csv`
-
-```csv
-id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_google_calendar_config,access_google_calendar_config,model_google_calendar_config,base.group_system,1,1,1,1
-```
-
-**Chỉ Admin mới có quyền:**
-- ✅ Xem cấu hình
-- ✅ Tạo/Sửa/Xóa cấu hình
-- ✅ Xem Service Account JSON (bảo mật)
+**Ràng buộc:**
+- Ngày kết thúc đăng ký < Ngày bắt đầu làm việc
+- Chỉ có 1 đợt "mo" tại 1 thời điểm
 
 ---
 
-## 6. CODE IMPLEMENTATION
+### Model 2.2: `dang_ky_ca_lam_theo_ngay` (Đăng ký ca làm)
 
-### 6.1. Method: `action_sync_to_google_calendar_api`
+**Mục đích:** Lưu đăng ký ca làm của nhân viên theo từng ngày
 
-**File:** `addons/google_calendar_integration/models/ngay_tra_luong.py`
+**Chức năng:**
+- Nhân viên đăng ký ca làm (Sáng/Chiều/Cả ngày)
+- Kiểm tra trùng lặp (1 nhân viên chỉ đăng ký 1 ca/ngày)
+- Tự động tạo bảng chấm công dựa trên đăng ký
+- Xem lịch đã đăng ký
 
-```python
-from odoo import models, fields, api, _
-from odoo.exceptions import UserError
-import json
-import logging
-from datetime import datetime, timedelta
+**Các trường quan trọng:**
+- `nhan_vien_id`: Nhân viên đăng ký
+- `dot_dang_ky_id`: Đợt đăng ký
+- `ngay_lam`: Ngày làm việc
+- `ca_lam`: Ca làm (Sáng/Chiều/Cả ngày)
 
-_logger = logging.getLogger(__name__)
+**Loại ca làm:**
+| Ca | Giờ vào | Giờ ra | Số giờ |
+|----|---------|--------|--------|
+| Sáng | 07:30 | 11:30 | 4h |
+| Chiều | 13:30 | 17:30 | 4h |
+| Cả ngày | 07:30 | 17:30 | 8h |
 
-try:
-    from google.oauth2 import service_account
-    from googleapiclient.discovery import build
-    from googleapiclient.errors import HttpError
-except ImportError:
-    _logger.warning('Google API libraries not installed')
+**Ràng buộc:**
+- UNIQUE (nhan_vien_id, ngay_lam)
 
-class NgayTraLuong(models.Model):
-    _inherit = 'tinh_luong.ngay_tra_luong'
-    
-    google_event_id = fields.Char(string='Google Event ID', readonly=True)
-    google_event_link = fields.Char(string='Google Event Link', readonly=True)
-    sync_calendar_status = fields.Selection([
-        ('not_synced', 'Chưa đồng bộ'),
-        ('synced', 'Đã đồng bộ'),
-        ('error', 'Lỗi')
-    ], string='Trạng thái đồng bộ', default='not_synced')
-    
-    def action_sync_to_google_calendar_api(self):
-        """Đồng bộ ngày trả lương lên Google Calendar"""
-        self.ensure_one()
-        
-        # 1. Lấy cấu hình
-        config = self.env['google.calendar.config'].search([
-            ('active', '=', True)
-        ], limit=1)
-        
-        if not config:
-            raise UserError(_(
-                'Chưa cấu hình Google Calendar!\n\n'
-                'Vui lòng vào Settings → Google Calendar Config để cấu hình.'
-            ))
-        
-        if not config.service_account_json:
-            raise UserError(_(
-                'Chưa cấu hình Service Account JSON!\n\n'
-                'Vui lòng thêm Service Account JSON vào cấu hình.'
-            ))
-        
-        try:
-            # 2. Parse JSON credentials
-            credentials_dict = json.loads(config.service_account_json)
-            
-            # 3. Tạo credentials
-            SCOPES = ['https://www.googleapis.com/auth/calendar']
-            credentials = service_account.Credentials.from_service_account_info(
-                credentials_dict,
-                scopes=SCOPES
-            )
-            
-            # 4. Tạo Google Calendar API client
-            service = build('calendar', 'v3', credentials=credentials)
-            
-            # 5. Chuẩn bị event data
-            event_summary = f"💰 Trả lương - {self.ten_dot_chi_tra or self.dot_lam_viec_id.ten_dot}"
-            event_description = f"""
-Ngày trả lương cho đợt: {self.dot_lam_viec_id.ten_dot}
-Tháng: {self.dot_lam_viec_id.thang}/{self.dot_lam_viec_id.nam}
+---
 
-Được tạo tự động từ hệ thống Odoo HR Management.
-            """.strip()
-            
-            event = {
-                'summary': event_summary,
-                'description': event_description,
-                'start': {
-                    'date': self.ngay_tra.strftime('%Y-%m-%d'),
-                    'timeZone': 'Asia/Ho_Chi_Minh',
-                },
-                'end': {
-                    'date': self.ngay_tra.strftime('%Y-%m-%d'),
-                    'timeZone': 'Asia/Ho_Chi_Minh',
-                },
-                'reminders': {
-                    'useDefault': False,
-                    'overrides': [
-                        {'method': 'email', 'minutes': 24 * 60},  # 1 ngày trước
-                        {'method': 'popup', 'minutes': 60},       # 1 giờ trước
-                    ],
-                },
-                'colorId': '11',  # Màu đỏ (nổi bật)
-            }
-            
-            # 6. Gọi API tạo event
-            created_event = service.events().insert(
-                calendarId=config.calendar_id,
-                body=event
-            ).execute()
-            
-            # 7. Lưu kết quả
-            self.write({
-                'google_event_id': created_event['id'],
-                'google_event_link': created_event.get('htmlLink'),
-                'sync_calendar_status': 'synced',
-            })
-            
-            _logger.info(f'Successfully synced event to Google Calendar: {created_event["id"]}')
-            
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': _('Thành công!'),
-                    'message': _('Đã tạo sự kiện trên Google Calendar!'),
-                    'type': 'success',
-                    'sticky': False,
-                }
-            }
-            
-        except json.JSONDecodeError as e:
-            _logger.error(f'Invalid JSON format: {str(e)}')
-            self.sync_calendar_status = 'error'
-            raise UserError(_(
-                'Service Account JSON không hợp lệ!\n\n'
-                'Vui lòng kiểm tra lại định dạng JSON.'
-            ))
-            
-        except HttpError as e:
-            _logger.error(f'Google API error: {str(e)}')
-            self.sync_calendar_status = 'error'
-            raise UserError(_(
-                'Lỗi khi gọi Google Calendar API!\n\n'
-                f'Chi tiết: {str(e)}\n\n'
-                'Vui lòng kiểm tra:\n'
-                '1. Calendar ID đúng chưa?\n'
-                '2. Đã share calendar với Service Account chưa?\n'
-                '3. Service Account có quyền "Make changes to events"?'
-            ))
-            
-        except Exception as e:
-            _logger.error(f'Unexpected error: {str(e)}')
-            self.sync_calendar_status = 'error'
-            raise UserError(_(
-                f'Lỗi không xác định!\n\n{str(e)}'
-            ))
-    
-    def action_open_google_event(self):
-        """Mở event trên Google Calendar"""
-        self.ensure_one()
-        if not self.google_event_link:
-            raise UserError(_('Chưa có link Google Calendar!'))
-        
-        return {
-            'type': 'ir.actions.act_url',
-            'url': self.google_event_link,
-            'target': 'new',
-        }
+### Model 2.3: `bang_cham_cong` (Bảng chấm công) ⭐
+
+**Mục đích:** Ghi nhận chấm công hàng ngày và tính toán tự động
+
+**Chức năng:**
+- Ghi nhận giờ vào/ra thực tế của nhân viên
+- **Tự động tính giờ vào ca, giờ ra ca** (dựa vào ca làm đã đăng ký)
+- **Tự động tính phút đi muộn** = max(0, giờ vào - giờ vào ca)
+- **Tự động tính phút về sớm** = max(0, giờ ra ca - giờ ra)
+- **Tự động xác định trạng thái** (Đi làm/Đi muộn/Về sớm/Vắng mặt)
+- **Điều chỉnh theo đơn từ** (nếu đơn được duyệt)
+- Xem lịch sử chấm công theo ngày/tháng
+
+**Các trường quan trọng:**
+- `nhan_vien_id`: Nhân viên chấm công
+- `ngay_cham_cong`: Ngày chấm công
+- `dang_ky_ca_lam_id`: Ca đã đăng ký
+- `ca_lam`: Ca làm (related từ đăng ký)
+- `gio_vao_ca`: Giờ vào ca chuẩn (computed)
+- `gio_ra_ca`: Giờ ra ca chuẩn (computed)
+- `gio_vao`: Giờ vào thực tế (nhập tay)
+- `gio_ra`: Giờ ra thực tế (nhập tay)
+- `phut_di_muon_goc`: Phút đi muộn gốc (computed)
+- `phut_di_muon`: Phút đi muộn sau điều chỉnh (computed)
+- `phut_ve_som_goc`: Phút về sớm gốc (computed)
+- `phut_ve_som`: Phút về sớm sau điều chỉnh (computed)
+- `trang_thai`: Trạng thái chấm công (computed)
+- `don_tu_id`: Đơn từ liên quan
+
+**Trạng thái:**
+- `di_lam`: Đi làm đúng giờ
+- `di_muon`: Đi muộn
+- `ve_som`: Về sớm
+- `di_muon_ve_som`: Cả 2
+- `vang_mat`: Vắng mặt
+- `vang_mat_co_phep`: Vắng mặt có phép
+
+**Ràng buộc:**
+- UNIQUE (nhan_vien_id, ngay_cham_cong)
+
+---
+
+### Model 2.4: `don_tu` (Đơn từ)
+
+**Mục đích:** Quản lý đơn xin phép của nhân viên
+
+**Chức năng:**
+- Nhân viên gửi đơn xin đi muộn/về sớm/nghỉ phép
+- Quản lý duyệt đơn từ (chờ duyệt/đã duyệt/từ chối)
+- **Tự động điều chỉnh chấm công** khi đơn được duyệt
+- Lưu lịch sử đơn từ
+- Thống kê đơn từ theo nhân viên
+
+**Các trường quan trọng:**
+- `nhan_vien_id`: Nhân viên gửi đơn
+- `loai_don`: Loại đơn (di_muon/ve_som/nghi_phep)
+- `ngay_ap_dung`: Ngày áp dụng đơn
+- `thoi_gian_xin`: Thời gian xin (phút)
+- `ly_do`: Lý do xin phép
+- `trang_thai_duyet`: Trạng thái (cho_duyet/da_duyet/tu_choi)
+- `nguoi_duyet_id`: Người duyệt
+- `ngay_duyet`: Ngày duyệt
+
+**Loại đơn:**
+- `di_muon`: Xin đi muộn → Giảm phút đi muộn
+- `ve_som`: Xin về sớm → Giảm phút về sớm
+- `nghi_phep`: Xin nghỉ phép → Trạng thái = vắng mặt có phép
+
+**Quy trình:**
 ```
-
-### 6.2. Views
-
-**File:** `addons/google_calendar_integration/views/google_calendar_config_views.xml`
-
-```xml
-<?xml version="1.0" encoding="utf-8"?>
-<odoo>
-    <!-- Form view -->
-    <record id="view_ngay_tra_luong_form_google" model="ir.ui.view">
-        <field name="name">tinh_luong.ngay_tra_luong.form.google</field>
-        <field name="model">tinh_luong.ngay_tra_luong</field>
-        <field name="inherit_id" ref="tinh_luong.view_ngay_tra_luong_form"/>
-        <field name="arch" type="xml">
-            <!-- Thêm buttons -->
-            <xpath expr="//button[@name='action_sync_to_google_calendar']" position="after">
-                <button name="action_sync_to_google_calendar_api" 
-                        type="object" 
-                        string="🔗 Đồng bộ Google Calendar API" 
-                        class="btn-primary"/>
-                <button name="action_open_google_event" 
-                        type="object" 
-                        string="📅 Xem trên Google Calendar" 
-                        class="btn-secondary"
-                        attrs="{'invisible': [('google_event_link', '=', False)]}"/>
-            </xpath>
-            
-            <!-- Thêm fields -->
-            <xpath expr="//field[@name='google_calendar_event_id']" position="after">
-                <field name="sync_calendar_status"/>
-                <field name="google_event_id" readonly="1"/>
-                <field name="google_event_link" widget="url" readonly="1"/>
-            </xpath>
-        </field>
-    </record>
-</odoo>
+cho_duyet → da_duyet (Quản lý duyệt)
+         ↘ tu_choi (Quản lý từ chối)
 ```
 
 ---
 
-## 7. XỬ LÝ LỖI
+## 3️⃣ MODULE TÍNH LƯƠNG (tinh_luong)
 
-### 7.1. Các lỗi thường gặp
+### Model 3.1: `dot_lam_viec` (Đợt làm việc)
 
-| Lỗi | Nguyên nhân | Giải pháp |
-|-----|-------------|-----------|
-| `Invalid JSON` | JSON sai format | Kiểm tra JSON validator |
-| `403 Forbidden` | Chưa share calendar | Share calendar với Service Account |
-| `404 Not Found` | Calendar ID sai | Kiểm tra lại Calendar ID |
-| `401 Unauthorized` | Credentials sai | Tạo lại Service Account |
-| `Module not found` | Thiếu thư viện | `pip install google-api-python-client` |
+**Mục đích:** Quản lý các đợt làm việc theo tháng
 
-### 7.2. Logging
+**Chức năng:**
+- Tạo đợt làm việc cho tháng mới
+- Thiết lập thời gian làm việc (từ ngày - đến ngày)
+- Mở/đóng đợt làm việc
+- Liên kết với bảng lương và ngày trả lương
 
-```python
-import logging
-_logger = logging.getLogger(__name__)
+**Các trường quan trọng:**
+- `ten_dot`: Tên đợt (VD: "Tháng 2/2026")
+- `ngay_bat_dau`: Ngày bắt đầu (VD: 01/02/2026)
+- `ngay_ket_thuc`: Ngày kết thúc (VD: 28/02/2026)
+- `thang`: Tháng (1-12)
+- `nam`: Năm
+- `trang_thai`: Trạng thái (dang_mo/da_dong)
 
-# Log info
-_logger.info('Successfully synced event')
+**Ràng buộc:**
+- UNIQUE (thang, nam) - Mỗi tháng chỉ có 1 đợt
+- Không thể xóa đợt đã có bảng lương
 
-# Log warning
-_logger.warning('Calendar ID not configured')
+---
 
-# Log error
-_logger.error(f'API error: {str(e)}')
+### Model 3.2: `tinh_luong.bang_luong` (Bảng lương) ⭐
+
+**Mục đích:** Lưu thông tin lương của nhân viên theo tháng
+
+**Chức năng:**
+- Tính lương tự động cho tất cả nhân viên
+- Lấy lương cơ bản từ chức vụ
+- **Tự động tính tổng trợ cấp** (SUM của các trợ cấp)
+- **Tự động tính tổng lương** = Lương cơ bản + Tổng trợ cấp
+- Quản lý trạng thái (Nháp/Đã xác nhận/Đã trả)
+- In phiếu lương
+
+**Các trường quan trọng:**
+- `nhan_vien_id`: Nhân viên
+- `dot_lam_viec_id`: Đợt làm việc
+- `luong_co_ban`: Lương cơ bản
+- `tong_tro_cap`: Tổng trợ cấp (computed)
+- `tong_luong`: Tổng lương (computed)
+- `thang`: Tháng lương
+- `state`: Trạng thái (draft/confirmed/paid)
+- `ghi_chu`: Ghi chú
+
+**Công thức:**
+```
+Tổng lương = Lương cơ bản + Tổng trợ cấp
 ```
 
-**Xem logs:**
-```bash
-tail -f /var/log/odoo/odoo-server.log
+**Workflow:**
+```
+draft (Nháp) → confirmed (Đã xác nhận) → paid (Đã trả)
+```
+
+**Ràng buộc:**
+- UNIQUE (nhan_vien_id, dot_lam_viec_id)
+
+---
+
+### Model 3.3: `tinh_luong.tro_cap` (Trợ cấp)
+
+**Mục đích:** Quản lý các khoản trợ cấp của nhân viên
+
+**Chức năng:**
+- Thêm/sửa/xóa trợ cấp cho bảng lương
+- Hỗ trợ 5 loại trợ cấp phổ biến
+- Tự động cộng vào tổng trợ cấp
+- Thống kê trợ cấp theo loại
+
+**Các trường quan trọng:**
+- `bang_luong_id`: Bảng lương
+- `loai`: Loại trợ cấp
+- `so_tien`: Số tiền (VNĐ)
+- `mo_ta`: Mô tả chi tiết
+
+**5 Loại trợ cấp:**
+
+| Loại | Tên | Số tiền mặc định | Cách tính |
+|------|-----|------------------|-----------|
+| `an_trua` | Tiền ăn trưa | 30,000 VNĐ/ngày | 30,000 × số ngày làm việc |
+| `xang_xe` | Tiền xăng xe | 500,000 VNĐ/tháng | Cố định |
+| `dien_thoai` | Tiền điện thoại | 200,000 VNĐ/tháng | Cố định |
+| `nha_o` | Tiền nhà ở | 1,000,000 VNĐ/tháng | Tùy chọn |
+| `khac` | Trợ cấp khác | Tùy chỉnh | Tùy chỉnh |
+
+**Ví dụ:**
+```
+Tiền ăn trưa: 30,000 × 20 ngày = 600,000 VNĐ
+Tiền xăng xe: 500,000 VNĐ
+Tiền điện thoại: 200,000 VNĐ
+→ Tổng trợ cấp: 1,300,000 VNĐ
 ```
 
 ---
 
-## 8. BẢO MẬT
+### Model 3.4: `tinh_luong.ngay_tra_luong` (Ngày trả lương)
 
-### 8.1. Bảo vệ Service Account JSON
+**Mục đích:** Quản lý ngày trả lương và tích hợp Google Calendar
 
-✅ **Nên làm:**
-- Lưu trong database (encrypted)
-- Chỉ Admin mới xem được
-- Không commit vào Git
-- Sử dụng environment variables (production)
+**Chức năng:**
+- Thiết lập ngày trả lương cho đợt làm việc
+- **Tích hợp Google Calendar API** (tạo event tự động)
+- Lưu link event Google Calendar
+- Theo dõi trạng thái đồng bộ
+- Nhắc nhở tự động qua email
 
-❌ **Không nên:**
-- Hardcode trong code
-- Lưu trong file text
-- Share công khai
-- Commit vào Git
+**Các trường quan trọng:**
+- `ten_dot_chi_tra`: Tên đợt chi trả
+- `dot_lam_viec_id`: Đợt làm việc
+- `ngay_tra`: Ngày trả lương
+- `sync_calendar_status`: Trạng thái đồng bộ (not_synced/synced/error)
+- `google_event_id`: Google Event ID
+- `google_event_link`: Link event trên Google Calendar
 
-### 8.2. Phân quyền
+**Ràng buộc:**
+- Ngày trả >= Ngày kết thúc đợt làm việc
+- UNIQUE (dot_lam_viec_id) - Mỗi đợt chỉ có 1 ngày trả
 
-```python
-# Chỉ Admin mới đồng bộ
-@api.constrains('user_id')
-def _check_admin_only(self):
-    if not self.env.user.has_group('base.group_system'):
-        raise UserError('Chỉ Admin mới có quyền đồng bộ!')
+**Tích hợp Google Calendar:**
+- Event title: "💰 Trả lương - Tháng X/YYYY"
+- Reminder email: 1 ngày trước
+- Reminder popup: 1 giờ trước
+
+---
+
+## 4️⃣ MODULE DASHBOARD (hr_dashboard)
+
+### Model 4.1: Không có model riêng
+
+**Mục đích:** Hiển thị biểu đồ và thống kê từ các module khác
+
+**Chức năng:**
+- Sử dụng dữ liệu từ `nhan_vien`, `bang_cham_cong`, `bang_luong`, `tro_cap`
+- Tạo graph views (biểu đồ cột, tròn, đường)
+- Tạo pivot views (bảng phân tích)
+- Menu tổng hợp truy cập nhanh
+
+**Các biểu đồ:**
+
+**Nhân sự:**
+- Biểu đồ cột: Số nhân viên theo phòng ban
+- Biểu đồ tròn: Phân bổ theo chức vụ
+
+**Chấm công:**
+- Biểu đồ tròn: Trạng thái chấm công
+- Biểu đồ cột: Phút đi muộn theo nhân viên
+- Biểu đồ cột: Số lần chấm công
+
+**Lương:**
+- Biểu đồ cột: Tổng lương theo nhân viên
+- Biểu đồ cột xếp chồng: Cấu trúc lương (Lương CB vs Trợ cấp)
+- Biểu đồ tròn: Phân bổ trợ cấp theo loại
+
+---
+
+## 5️⃣ MODULE GOOGLE CALENDAR INTEGRATION
+
+### Model 5.1: `google.calendar.config` (Cấu hình Google Calendar)
+
+**Mục đích:** Lưu cấu hình kết nối Google Calendar API
+
+**Chức năng:**
+- Lưu thông tin Service Account JSON
+- Lưu Calendar ID
+- Kiểm tra kết nối
+- Quản lý nhiều cấu hình
+
+**Các trường quan trọng:**
+- `name`: Tên cấu hình
+- `calendar_id`: Calendar ID (email)
+- `service_account_json`: Nội dung JSON file (Service Account)
+- `active`: Kích hoạt
+
+**Hướng dẫn:**
+1. Tạo Service Account trên Google Cloud Console
+2. Download JSON key
+3. Paste nội dung JSON vào trường `service_account_json`
+4. Nhập Calendar ID (email của bạn)
+5. Share Calendar với email của Service Account
+
+---
+
+### Model 5.2: Mở rộng `tinh_luong.ngay_tra_luong`
+
+**Chức năng bổ sung:**
+- Method `action_sync_to_google_calendar_api()`: Đồng bộ với Google Calendar
+- Method `action_open_google_event()`: Mở event trên Google Calendar
+- Lưu trạng thái đồng bộ
+- Xử lý lỗi khi đồng bộ
+
+**Quy trình đồng bộ:**
+```
+1. Đọc cấu hình Google Calendar
+2. Parse Service Account JSON
+3. Tạo Google API client
+4. Gọi Calendar API: events.insert
+5. Lưu Event ID và Link
+6. Cập nhật trạng thái: synced
 ```
 
 ---
 
-## 9. TESTING
+## 📊 TỔNG HỢP
 
-### 9.1. Unit Test
+### Bảng tổng hợp Models
 
-```python
-from odoo.tests import TransactionCase
-
-class TestGoogleCalendarIntegration(TransactionCase):
-    
-    def setUp(self):
-        super().setUp()
-        self.config = self.env['google.calendar.config'].create({
-            'name': 'Test Config',
-            'calendar_id': 'test@example.com',
-            'service_account_json': '{}',
-        })
-    
-    def test_sync_without_config(self):
-        """Test sync khi chưa có cấu hình"""
-        ngay_tra = self.env['tinh_luong.ngay_tra_luong'].create({
-            'ten_dot_chi_tra': 'Test',
-            'ngay_tra': '2026-03-05',
-        })
-        
-        with self.assertRaises(UserError):
-            ngay_tra.action_sync_to_google_calendar_api()
-```
-
-### 9.2. Manual Test
-
-**Test case 1: Tạo event thành công**
-1. Cấu hình đúng
-2. Tạo ngày trả lương
-3. Click "Đồng bộ"
-4. ✅ Kiểm tra event trên Google Calendar
-
-**Test case 2: Lỗi khi chưa cấu hình**
-1. Xóa cấu hình
-2. Click "Đồng bộ"
-3. ✅ Hiển thị lỗi rõ ràng
+| Module | Số Models | Models chính |
+|--------|-----------|--------------|
+| **QLNS** | 3 | nhan_vien, phong_ban, chuc_vu |
+| **Chấm công** | 4 | bang_cham_cong, dang_ky_ca_lam, don_tu, dot_dang_ky |
+| **Tính lương** | 4 | bang_luong, tro_cap, ngay_tra_luong, dot_lam_viec |
+| **Dashboard** | 0 | (Sử dụng views) |
+| **Google Calendar** | 1 | google.calendar.config |
+| **TỔNG** | **12** | **models** |
 
 ---
 
-## 10. MỞ RỘNG TƯƠNG LAI
+### Models có Computed Fields (Tự động tính)
 
-### 10.1. Tính năng bổ sung
-
-#### 🔄 **Đồng bộ 2 chiều**
-- Cập nhật Odoo khi event thay đổi trên Google
-- Webhook từ Google Calendar
-
-#### 📧 **Tích hợp Gmail API**
-- Gửi email phiếu lương
-- Thông báo chấm công
-
-#### 📊 **Google Sheets Integration**
-- Xuất báo cáo lương ra Google Sheets
-- Tự động cập nhật
-
-#### 📱 **Google Meet Integration**
-- Tạo meeting cho họp lương
-- Video call tự động
-
-### 10.2. Tích hợp thêm dịch vụ khác
-
-| Dịch vụ | Mục đích | API |
-|---------|----------|-----|
-| **Slack** | Thông báo real-time | Slack API |
-| **Microsoft Teams** | Thông báo công ty | Teams API |
-| **Telegram** | Bot nhắc nhở | Telegram Bot API |
-| **Zalo** | Thông báo Việt Nam | Zalo API |
+| Model | Computed Fields | Mô tả |
+|-------|-----------------|-------|
+| `bang_cham_cong` | gio_vao_ca, gio_ra_ca | Tính theo ca làm |
+| `bang_cham_cong` | phut_di_muon, phut_ve_som | Tính theo giờ vào/ra |
+| `bang_cham_cong` | trang_thai | Dựa vào phút đi muộn/về sớm |
+| `bang_luong` | tong_tro_cap | SUM(tro_cap.so_tien) |
+| `bang_luong` | tong_luong | luong_co_ban + tong_tro_cap |
 
 ---
 
-## 📊 TỔNG KẾT
+### Models có Workflow (State Machine)
 
-### ✅ Đã hoàn thành
+| Model | States | Workflow |
+|-------|--------|----------|
+| `bang_luong` | draft → confirmed → paid | Nháp → Xác nhận → Đã trả |
+| `don_tu` | cho_duyet → da_duyet/tu_choi | Chờ → Duyệt/Từ chối |
+| `dot_dang_ky` | mo → dong | Mở → Đóng |
+| `dot_lam_viec` | dang_mo → da_dong | Đang mở → Đã đóng |
 
-- ✅ Tích hợp Google Calendar API v3
-- ✅ Service Account Authentication
-- ✅ Tự động tạo event
-- ✅ Lưu Event ID và Link
-- ✅ Xử lý lỗi chi tiết
-- ✅ Logging đầy đủ
-- ✅ Bảo mật Service Account JSON
-- ✅ Phân quyền Admin only
-- ✅ Nhắc nhở email + popup
+---
 
-### 🎯 Điểm nổi bật
+### Models có tích hợp External API
 
-- ⭐ **External API Integration** - Yêu cầu nâng cao
-- ⭐ **Service Account** - Bảo mật cao
-- ⭐ **Error Handling** - Xử lý lỗi tốt
-- ⭐ **User-friendly** - Thông báo rõ ràng
-- ⭐ **Scalable** - Dễ mở rộng
+| Model | API | Chức năng |
+|-------|-----|-----------|
+| `ngay_tra_luong` | Google Calendar API v3 | Tạo event tự động |
 
-### 📈 Metrics
+---
 
-- **Số dòng code:** ~200 lines
-- **Số API calls:** 1 call/event
-- **Response time:** < 2 seconds
-- **Success rate:** 99%+
+## 🎯 TÍNH NĂNG NỔI BẬT
+
+### ⭐ Tự động hóa
+- ✅ `bang_cham_cong`: Tự động tính đi muộn, về sớm, trạng thái
+- ✅ `bang_luong`: Tự động tính tổng trợ cấp, tổng lương
+- ✅ `don_tu`: Tự động điều chỉnh chấm công khi duyệt
+
+### ⭐ Tích hợp bên ngoài
+- ✅ `ngay_tra_luong`: Tích hợp Google Calendar API
+- ✅ Tạo event tự động
+- ✅ Nhắc nhở email & popup
+
+### ⭐ Computed Fields
+- ✅ 5 computed fields trong `bang_cham_cong`
+- ✅ 2 computed fields trong `bang_luong`
+- ✅ Tự động cập nhật khi dữ liệu thay đổi
 
 ---
 
 **Tạo bởi:** Hệ thống Quản lý Nhân sự  
 **Ngày:** 02/02/2026  
-**Phiên bản:** 1.0  
-**Module:** google_calendar_integration
+**Phiên bản:** 1.0
